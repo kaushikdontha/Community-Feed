@@ -32,27 +32,32 @@ A full-stack web application for community discussions with nested comments, vot
 ### Home Feed
 Browse posts from all communities with voting and comments.
 
-![Home Feed](frontend/public/screenshots/home-feed.png)
-
-### Post Detail
-View full post with threaded comment tree.
-
-![Post Detail](frontend/public/screenshots/post-detail.png)
+![Home Feed](Screenshots/Screenshot%202026-02-05%20131924.png)
 
 ### Create Post
 Easy post creation with community selection.
 
-![Create Post](frontend/public/screenshots/create-post.png)
+![Create Post](Screenshots/Screenshot%202026-02-05%20131935.png)
 
 ### User Profile
 View user karma, posts, and activity.
 
-![User Profile](frontend/public/screenshots/user-profile.png)
+![User Profile](Screenshots/Screenshot%202026-02-05%20132507.png)
 
-### Leaderboard
-24-hour karma leaderboard calculated from transaction history.
+### Login Page
+Secure user authentication.
 
-![Leaderboard](frontend/public/screenshots/leaderboard.png)
+![Login Page](Screenshots/Screenshot%202026-02-05%20132523.png)
+
+### Sign Up Page
+Join the community.
+
+![Sign Up Page](Screenshots/Screenshot%202026-02-05%20132530.png)
+
+### Django Admin
+Backend management interface.
+
+![Django Admin](Screenshots/Screenshot%202026-02-05%20132002.png)
 
 ## Project Structure
 
