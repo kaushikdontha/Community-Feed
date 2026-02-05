@@ -184,6 +184,6 @@ For production, create a `.env` file in the `backend/` folder:
 
 ## Live Demo
 
-- **Frontend:** [Coming Soon - Vercel deployment]
-- **Backend API:** [Coming Soon - Railway deployment]
+- **Frontend:** https://communityfeed-ten.vercel.app/
+- **Backend API:** 
 
