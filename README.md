@@ -1,6 +1,6 @@
-# Community Feed - Reddit-Style Community Platform
+# Community Feed -  Community Platform
 
-A full-stack web application for community discussions with nested comments, voting, and karma system. Built with React.js frontend and Django REST Framework backend with SQLite/PostgreSQL database.
+A full-stack web application for community discussions with nested comments, voting, and karma system. Built with React.js frontend and Django REST Framework backend with PostgreSQL database.
 
 ## Features
 
@@ -25,7 +25,7 @@ A full-stack web application for community discussions with nested comments, vot
 - Django 5.0
 - Django REST Framework
 - Simple JWT
-- SQLite (dev) / PostgreSQL (prod)
+- PostgreSQL (prod)
 
 ## Screenshots
 
@@ -181,31 +181,9 @@ After running `seed_data.py`:
 
 For production, create a `.env` file in the `backend/` folder:
 
-```env
-SECRET_KEY=your_django_secret_key
-DEBUG=False
-ALLOWED_HOSTS=your-domain.com
-DATABASE_URL=postgres://user:pass@host:5432/dbname
-```
 
 ## Live Demo
 
 - **Frontend:** [Coming Soon - Vercel deployment]
 - **Backend API:** [Coming Soon - Railway deployment]
 
-## Technical Documentation
-
-See [EXPLAINER.md](EXPLAINER.md) for detailed explanations of:
-- 🌳 **Nested Comments** - How threaded comments avoid N+1 queries
-- 📊 **24h Leaderboard** - Dynamic karma calculation from transaction history
-- 🐛 **AI Audit** - Bug fixes and code improvements
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Author
-
-**Kaushik Dontha**
-
-- GitHub: [@kaushikdontha](https://github.com/kaushikdontha)
