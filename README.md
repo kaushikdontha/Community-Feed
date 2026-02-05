@@ -29,10 +29,10 @@ A full-stack web application for community discussions with nested comments, vot
 
 ## Screenshots
 
-### Home Feed
+### Community Post
 Browse posts from all communities with voting and comments.
 
-![Home Feed](Screenshots/Screenshot%202026-02-05%20131924.png)
+(Screenshots/Screenshot%202026-02-05%20131924.png)
 
 ### Create Post
 Easy post creation with community selection.
