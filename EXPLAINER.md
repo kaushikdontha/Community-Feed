@@ -1,229 +1,117 @@
-# 🔍 Technical Explainer
+# Technical Explainer
 
-This document explains the key technical decisions and implementations in Community Feed.
+This document explains the key technical features of Community Feed.
 
 ---
 
-## 📌 The Tree: Nested Comments
+## Nested Comments
 
-### Database Model
+Comments support replies to create threaded discussions, similar to Reddit.
 
-Nested comments are modeled using a **self-referential ForeignKey** (Adjacency List pattern):
+### How It Works
+
+Each comment has a `parent` field that points to another comment:
 
 ```python
-# backend/apps/comments/models.py
-
 class Comment(models.Model):
-    content = models.TextField(max_length=10000)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    content = models.TextField()
+    author = models.ForeignKey(User)
+    post = models.ForeignKey(Post)
     
-    # Self-referential relationship for nesting
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,      # null = top-level comment
-        blank=True,
-        related_name='replies'
-    )
-    
-    vote_score = models.IntegerField(default=0)
-    is_deleted = models.BooleanField(default=False)
+    # Points to parent comment (null = top-level)
+    parent = models.ForeignKey('self', null=True, related_name='replies')
 ```
 
-**Why Adjacency List?**
-- Simple to understand and implement
-- Easy to add new replies (just set `parent_id`)
-- Works well for Reddit-style trees (typically 3-5 levels deep)
+- **Top-level comments** have `parent = null`
+- **Replies** have `parent = the comment they're replying to`
 
-### Avoiding N+1 Queries
-
-Without optimization, fetching 50 comments would trigger **50+ SQL queries** (one for each comment's replies). We solve this with `prefetch_related`:
-
-```python
-# backend/apps/comments/views.py
-
-def get_prefetched_comments_queryset(base_queryset):
-    """
-    Prefetch nested comments up to 3 levels deep to solve N+1 problem.
-    Instead of triggering 50 queries for 50 comments, this uses just a few queries.
-    """
-    # Level 1 replies
-    level1_prefetch = Prefetch(
-        'replies',
-        queryset=Comment.objects.filter(is_deleted=False).select_related('author')
-    )
-    
-    # Level 2 replies (replies to replies)
-    level2_prefetch = Prefetch(
-        'replies__replies',
-        queryset=Comment.objects.filter(is_deleted=False).select_related('author')
-    )
-    
-    # Level 3 replies (deepest level)
-    level3_prefetch = Prefetch(
-        'replies__replies__replies',
-        queryset=Comment.objects.filter(is_deleted=False).select_related('author')
-    )
-    
-    return base_queryset.prefetch_related(
-        level1_prefetch,
-        level2_prefetch,
-        level3_prefetch,
-        'votes',
-        'replies__votes',
-        'replies__replies__votes',
-    )
-```
-
-**Result:** 50 nested comments load in **~6 queries** instead of 50+.
+This creates a tree structure where each comment can have many replies.
 
 ---
 
-## 📌 The Math: 24-Hour Leaderboard
+## 24-Hour Karma Leaderboard
 
-### The Constraint
+The leaderboard shows users who earned the most karma in the last 24 hours.
 
-Daily karma is **NOT** stored as a simple integer field. It's calculated **dynamically** from an immutable transaction log.
+### How It Works
 
-### Karma Transaction Model
+Instead of storing "daily karma" as a number, we log every karma change:
 
 ```python
-# backend/apps/users/models.py
-
 class KarmaTransaction(models.Model):
-    """Immutable log of all karma changes."""
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    delta = models.IntegerField()  # +1 or -1
-    reason = models.CharField(max_length=30, choices=REASON_CHOICES)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    user = models.ForeignKey(User)
+    delta = models.IntegerField()  # +1 for upvote, -1 for downvote
+    created_at = models.DateTimeField(auto_now_add=True)
+```
+
+When someone upvotes your post:
+1. A `KarmaTransaction` is created with `delta = +1`
+2. Your total karma increases
+
+### Getting the Leaderboard
+
+We sum up all karma changes from the last 24 hours:
+
+```python
+yesterday = timezone.now() - timedelta(hours=24)
+
+leaderboard = KarmaTransaction.objects.filter(
+    created_at__gte=yesterday
+).values('user__username').annotate(
+    karma_24h=Sum('delta')
+).order_by('-karma_24h')[:10]
+```
+
+This gives us the top 10 users by karma earned in the last 24 hours.
+
+**Benefits:**
+- Accurate rolling 24-hour window
+- Can't be cheated by manipulating stored values
+- Full history for analysis
+
+---
+
+## Voting System
+
+Posts and comments can be upvoted or downvoted.
+
+### How It Works
+
+```python
+class PostVote(models.Model):
+    user = models.ForeignKey(User)
+    post = models.ForeignKey(Post)
+    vote_type = models.CharField(choices=[('up', 'Upvote'), ('down', 'Downvote')])
     
     class Meta:
-        indexes = [
-            models.Index(fields=['user', 'created_at']),  # Optimizes 24h queries
-        ]
+        unique_together = ['user', 'post']  # One vote per user per post
 ```
 
-### The Leaderboard Query
-
-```python
-# backend/apps/users/views.py
-
-@api_view(['GET'])
-def leaderboard_24h(request):
-    yesterday = timezone.now() - timedelta(hours=24)
-    limit = int(request.query_params.get('limit', 10))
-    limit = min(limit, 100)  # Cap at 100
-    
-    # Aggregate karma from transactions in the last 24 hours
-    leaderboard = KarmaTransaction.objects.filter(
-        created_at__gte=yesterday
-    ).values(
-        'user__id',
-        'user__username',
-        'user__avatar',
-    ).annotate(
-        karma_24h=Sum('delta')
-    ).order_by('-karma_24h')[:limit]
-    
-    return Response({'leaderboard': leaderboard})
-```
-
-### Generated SQL
-
-```sql
-SELECT 
-    users_user.id,
-    users_user.username,
-    users_user.avatar,
-    SUM(users_karmatransaction.delta) AS karma_24h
-FROM users_karmatransaction
-INNER JOIN users_user ON (users_karmatransaction.user_id = users_user.id)
-WHERE users_karmatransaction.created_at >= '2026-02-04T10:47:21+05:30'
-GROUP BY users_user.id, users_user.username, users_user.avatar
-ORDER BY karma_24h DESC
-LIMIT 10;
-```
-
-**Why this approach?**
-- Accurately reflects karma in *exactly* the last 24 hours (rolling window)
-- Prevents gaming - can't manipulate a stored field
-- Transaction history enables auditing and analysis
+The `unique_together` constraint prevents users from voting multiple times on the same post.
 
 ---
 
-## 📌 The AI Audit: Bug Fix Example
+## Authentication
 
-### The Bug: PostVote Model Field Mismatch
+We use JWT (JSON Web Tokens) for secure authentication.
 
-When creating the seed data script, the AI assumed PostVote used a numeric `value` field:
+### Login Flow
 
-```python
-# ❌ BUGGY CODE - AI's initial assumption
-vote, created = PostVote.objects.get_or_create(
-    post=post,
-    user=user,
-    defaults={"value": 1}  # Wrong! Field doesn't exist
-)
+1. User sends username/password to `/api/token/`
+2. Server validates and returns access + refresh tokens
+3. Frontend stores tokens and includes them in API requests
+4. Access token expires in 1 hour, refresh token in 7 days
+
+```javascript
+// Frontend sends token with every request
+headers: { 'Authorization': 'Bearer ' + accessToken }
 ```
-
-**Error:**
-```
-FieldError: Invalid field name(s) for model PostVote: 'value'
-```
-
-### The Investigation
-
-Inspecting the actual model revealed it uses `vote_type` with choices `'up'` / `'down'`:
-
-```python
-# backend/apps/posts/models.py
-
-class PostVote(models.Model):
-    VOTE_CHOICES = [
-        ('up', 'Upvote'),
-        ('down', 'Downvote'),
-    ]
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    vote_type = models.CharField(max_length=4, choices=VOTE_CHOICES)  # Not 'value'!
-```
-
-### The Fix
-
-```python
-# ✅ FIXED CODE
-from django.db.models import F
-
-vote, created = PostVote.objects.get_or_create(
-    post=post,
-    user=user,
-    defaults={"vote_type": "up"}  # Correct field name
-)
-if created:
-    # Also need to update the denormalized vote_score
-    Post.objects.filter(pk=post.pk).update(vote_score=F('vote_score') + 1)
-```
-
-### Lessons Learned
-
-1. **Don't assume model structure** - Always check the actual model definition
-2. **Consider side effects** - Creating a vote also requires updating the post's `vote_score`
-3. **Use atomic operations** - `F()` expression prevents race conditions when multiple users vote
 
 ---
 
-## 🔗 Live Demo
+## Database
 
-- **Hosted App:** [Coming Soon - Railway/Vercel deployment]
-- **API Docs:** http://localhost:8000/api/
+- **Development:** SQLite (simple, no setup)
+- **Production:** PostgreSQL (reliable, scalable)
 
----
-
-## 📚 Additional Resources
-
-- [Django Prefetch Documentation](https://docs.djangoproject.com/en/5.0/ref/models/querysets/#prefetch-related)
-- [Django F() Expressions](https://docs.djangoproject.com/en/5.0/ref/models/expressions/#f-expressions)
-- [Simple JWT](https://django-rest-framework-simplejwt.readthedocs.io/)
+The app automatically detects which database to use based on the `DATABASE_URL` environment variable.
