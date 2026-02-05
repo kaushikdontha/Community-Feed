@@ -1,9 +1,0 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "community-feed"
-version = "1.0.0"
-description = "Reddit-style community discussion platform"
-requires-python = ">=3.10"
