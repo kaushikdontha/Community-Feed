@@ -32,32 +32,32 @@ A full-stack web application for community discussions with nested comments, vot
 ### Community Post
 Browse posts from all communities with voting and comments.
 
-(Screenshots/Screenshot%202026-02-05%20131924.png)
+![Home Feed](screenshots/home-feed.png)
 
 ### Create Post
 Easy post creation with community selection.
 
-![Create Post](Screenshots/Screenshot%202026-02-05%20131935.png)
+![Create Post](screenshots/create-post.png)
 
 ### User Profile
 View user karma, posts, and activity.
 
-![User Profile](Screenshots/Screenshot%202026-02-05%20132507.png)
+![User Profile](screenshots/user-profile.png)
 
 ### Login Page
 Secure user authentication.
 
-![Login Page](Screenshots/Screenshot%202026-02-05%20132523.png)
+![Login Page](screenshots/login.png)
 
 ### Sign Up Page
 Join the community.
 
-![Sign Up Page](Screenshots/Screenshot%202026-02-05%20132530.png)
+![Sign Up Page](screenshots/signup.png)
 
 ### Django Admin
 Backend management interface.
 
-![Django Admin](Screenshots/Screenshot%202026-02-05%20132002.png)
+![Django Admin](screenshots/django-admin.png)
 
 ## Project Structure
 
