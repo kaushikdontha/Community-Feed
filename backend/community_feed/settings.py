@@ -76,19 +76,29 @@ WSGI_APPLICATION = 'community_feed.wsgi.application'
 # Use PostgreSQL in production (via DATABASE_URL), SQLite for local development
 import dj_database_url
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=not DEBUG,  # Require SSL in production (Railway)
-    )
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-# For Railway PostgreSQL SSL - ensure proper SSL mode
-if os.environ.get('DATABASE_URL') and not DEBUG:
-    DATABASES['default']['OPTIONS'] = {
-        'sslmode': 'require',
+if DATABASE_URL:
+    # Production: Use PostgreSQL from DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+    # Add SSL for Railway PostgreSQL
+    if 'postgres' in DATABASE_URL:
+        DATABASES['default']['OPTIONS'] = {
+            'sslmode': 'require',
+        }
+else:
+    # Development: Use SQLite (no SSL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
 
 
