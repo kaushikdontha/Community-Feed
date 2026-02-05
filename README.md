@@ -177,13 +177,5 @@ After running `seed_data.py`:
 | eve | testpass123 | Regular user |
 | frank | testpass123 | Regular user |
 
-## Environment Variables
 
-For production, create a `.env` file in the `backend/` folder:
-
-
-## Live Demo
-
-- **Frontend:** https://communityfeed-ten.vercel.app/
-- **Backend API:** 
 
