@@ -170,7 +170,16 @@ extra_origins = os.environ.get('CORS_ORIGINS', '')
 if extra_origins:
     CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in extra_origins.split(',')])
 
+# Allow all Vercel preview URLs with regex (they change with each deployment)
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+    r"^https://.*-kaushikdonthas-projects\.vercel\.app$",
+]
+
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = ['*']
+CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 
 # CSRF trusted origins for production
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
+CSRF_TRUSTED_ORIGINS.append('https://*.vercel.app')
